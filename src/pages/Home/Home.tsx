@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useCallback } from "react";
 import Board from "../../components/Board/Board.react";
 import Xs from "../../components/Xs/Xs.react";
 import useShowMe from "../../hooks/useShowMe";
@@ -19,6 +20,15 @@ function getCorrect(correctRate: number) {
   return Math.random() < correctRate;
 }
 
+function getBlankSpots(answers: (string | null | -1)[]) {
+  const blankSpots = answers
+    .map((answer, index) => (answer === null ? index : -1))
+    .filter((index) => index >= 0);
+  return blankSpots;
+}
+
+type GameState = "reset" | "playing" | "won" | "lost";
+
 const HomePage: React.FC = () => {
   // Voice detection
   const showing = useShowMe();
@@ -32,31 +42,92 @@ const HomePage: React.FC = () => {
   const [answers, setAnswers] = useState<(string | null | -1)[]>(
     getBlankAnswers(numOptions)
   );
+  const [gameState, setGameState] = useState<GameState>("reset");
+  const [boardVisible, setBoardVisible] = useState(false);
 
-  useEffect(() => {
-    if (!showing) return;
-    console.log("showing is", showing);
-
-    if (getCorrect(correctRate)) {
-      const blankSpots = answers
-        .map((answer, index) => (answer === null ? index : -1))
-        .filter((index) => index >= 0);
+  // Trigger a correct answer
+  const triggerCorrectAnswer = useCallback(
+    (answer: string) => {
+      const blankSpots = getBlankSpots(answers);
       if (!blankSpots.length) return;
       const filling = blankSpots[Math.floor(Math.random() * blankSpots.length)];
       setAnswers((oldAnswers) => {
         const newAnswers = [...oldAnswers];
-        newAnswers[filling] = showing;
+        newAnswers[filling] = answer;
         return newAnswers;
       });
+    },
+    [answers, setAnswers]
+  );
+
+  // Trigger an incorrect answer
+  const triggerIncorrectAnswer = useCallback(() => {
+    setNumXs((num) => num + 1);
+  }, [setNumXs]);
+
+  const applyGameState = useCallback(
+    (state: GameState) => {
+      if (state === "reset") {
+        setNumXs(0);
+        setAnswers(getBlankAnswers(numOptions));
+        setBoardVisible(true);
+        setGameState("playing");
+      }
+      if (state === "playing") {
+      }
+      if (state === "won") {
+        setBoardVisible(false);
+      }
+      if (state === "lost") {
+        setBoardVisible(true);
+      }
+    },
+    [setNumXs, setAnswers, numOptions, setBoardVisible, setGameState]
+  );
+
+  // React to game state
+  useEffect(() => {
+    applyGameState(gameState);
+  }, [gameState, applyGameState]);
+
+  // Check for loss
+  useEffect(() => {
+    if (numXs >= 3) setGameState("lost");
+    console.log(gameState);
+    alert("L");
+  }, [numXs, setGameState]);
+
+  // Check for win
+  useEffect(() => {
+    const blankSpots = getBlankSpots(answers);
+    if (blankSpots.length === 0) setGameState("won");
+  }, [answers, setGameState]);
+
+  useEffect(() => {
+    if (!showing) return;
+
+    const answerAlreadyExists = answers.some((answer) => answer === showing);
+    const correct = getCorrect(correctRate);
+
+    if (answerAlreadyExists || !correct) {
+      triggerIncorrectAnswer();
     } else {
-      setNumXs((num) => num + 1);
+      triggerCorrectAnswer(showing);
     }
-  }, [showing, correctRate, answers]);
+  }, [
+    showing,
+    correctRate,
+    answers,
+    triggerCorrectAnswer,
+    triggerIncorrectAnswer,
+  ]);
 
   return (
     <Background>
-      <Board answers={answers} />
+      <Board answers={answers} visible={boardVisible} />
       <Xs numXs={numXs} />
+      <button onClick={() => triggerCorrectAnswer("test")}>Correct</button>
+      <button onClick={() => triggerIncorrectAnswer()}>Incorrect</button>
     </Background>
   );
 };

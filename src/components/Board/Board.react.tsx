@@ -4,11 +4,12 @@ import { BoardBackground } from "./Board.styles";
 
 interface Props {
   answers: (string | null | -1)[];
+  visible: boolean;
 }
 
-const Board: React.FC<Props> = ({ answers }) => {
+const Board: React.FC<Props> = ({ answers, visible }) => {
   return (
-    <BoardBackground>
+    <BoardBackground visible={visible}>
       {answers.map((answer, index) => {
         return <Answer answer={answer} index={index + 1} />;
       })}
