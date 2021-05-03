@@ -4,6 +4,8 @@ import Board from "../../components/Board/Board.react";
 import Xs from "../../components/Xs/Xs.react";
 import useShowMe from "../../hooks/useShowMe";
 import { Background } from "./Home.styles";
+import BooSound from "../../assets/Boo.wav";
+import useSound from "use-sound";
 
 const DEFAULT_CORRECT_RATE = 0.5;
 const DEFAULT_NUM_OPTIONS = 6;
@@ -45,6 +47,9 @@ const HomePage: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>("reset");
   const [boardVisible, setBoardVisible] = useState(false);
 
+  // Sounds
+  const [playBooSound] = useSound(BooSound);
+
   // Trigger a correct answer
   const triggerCorrectAnswer = useCallback(
     (answer: string) => {
@@ -67,6 +72,7 @@ const HomePage: React.FC = () => {
 
   const applyGameState = useCallback(
     (state: GameState) => {
+      console.log("applying", state);
       if (state === "reset") {
         setNumXs(0);
         setAnswers(getBlankAnswers(numOptions));
@@ -79,10 +85,18 @@ const HomePage: React.FC = () => {
         setBoardVisible(false);
       }
       if (state === "lost") {
-        setBoardVisible(true);
+        setBoardVisible(false);
+        playBooSound();
       }
     },
-    [setNumXs, setAnswers, numOptions, setBoardVisible, setGameState]
+    [
+      setNumXs,
+      setAnswers,
+      numOptions,
+      setBoardVisible,
+      setGameState,
+      playBooSound,
+    ]
   );
 
   // React to game state
@@ -93,8 +107,6 @@ const HomePage: React.FC = () => {
   // Check for loss
   useEffect(() => {
     if (numXs >= 3) setGameState("lost");
-    console.log(gameState);
-    alert("L");
   }, [numXs, setGameState]);
 
   // Check for win
